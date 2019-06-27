@@ -16,7 +16,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		ClientID:     auth0config["ClientID"].(string),
 		ClientSecret: auth0config["ClientSecret"].(string),
 		RedirectURL:  authCallbackURL,
-		Scopes:       []string{"openid", "profile"},
+		Scopes:       []string{"openid", "email", "profile"},
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  "https://" + domain + "/authorize",
 			TokenURL: "https://" + domain + "/oauth/token",

@@ -4,8 +4,10 @@ import (
 	"context"
 	_ "crypto/sha512"
 	"encoding/json"
-	"golang.org/x/oauth2"
+	"fmt"
 	"net/http"
+
+	"golang.org/x/oauth2"
 )
 
 func CallbackHandler(w http.ResponseWriter, r *http.Request) {
@@ -16,7 +18,7 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		ClientID:     auth0config["ClientID"].(string),
 		ClientSecret: auth0config["ClientSecret"].(string),
 		RedirectURL:  authCallbackURL,
-		Scopes:       []string{"openid", "profile"},
+		Scopes:       []string{"openid", "email", "profile"},
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  "https://" + domain + "/authorize",
 			TokenURL: "https://" + domain + "/oauth/token",
@@ -26,6 +28,7 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	session, err := Store.Get(r, "state")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Error: Callback.go: On getting state from Store")
 		return
 	}
 
@@ -39,6 +42,7 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	token, err := conf.Exchange(context.TODO(), code)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Error: Callback.go: On Exchanging code")
 		return
 	}
 
@@ -47,6 +51,7 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	resp, err := client.Get("https://" + domain + "/userinfo")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Error: Callback.go: On getting userInfo")
 		return
 	}
 
@@ -55,12 +60,14 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	var profile map[string]interface{}
 	if err = json.NewDecoder(resp.Body).Decode(&profile); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Error: Callback.go: On decoding profile")
 		return
 	}
 
 	session, err = Store.Get(r, "auth-session")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Error: Callback.go: On getting auth-session")
 		return
 	}
 
@@ -70,6 +77,7 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	err = session.Save(r, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fmt.Println("Error: Callback.go: On saving session")
 		return
 	}
 

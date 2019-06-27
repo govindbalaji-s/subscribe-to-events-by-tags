@@ -1,3 +1,6 @@
 # Auth0 config
-auth0config
+authzero/auth0config.json
 main
+tempvendor/*
+tempGopkg.lock
+tempGopkg.toml
