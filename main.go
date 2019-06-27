@@ -11,6 +11,7 @@ import (
 	"./db"
 	"github.com/gorilla/sessions"
 	"go.mongodb.org/mongo-driver/bson"
+	"./api/tag"
 )
 
 func main() {
@@ -22,12 +23,15 @@ func main() {
 	cancelDbCtx := db.Init()
 	defer cancelDbCtx()
 
-	http.HandleFunc("/authcallback", authzero.CallbackHandler)
-	http.HandleFunc("/login", authzero.LoginHandler)
-	http.HandleFunc("/logout", authzero.LogoutHandler)
-	http.HandleFunc("/dashboard", authZeroTestHandler)
+	rout := mux.NewRouter()
+
+	rout.HandleFunc("/authcallback", authzero.CallbackHandler)
+	rout.HandleFunc("/login", authzero.LoginHandler)
+	rout.HandleFunc("/logout", authzero.LogoutHandler)
+	rout.HandleFunc("/dashboard", authZeroTestHandler)
+
 	//fmt.Println("going to start")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8080", rout))
 }
 
 func authZeroTestHandler(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +50,11 @@ func authZeroTestHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func CheckUserInDB(session *sessions.Session, r *http.Request) {
-	userProfile := session.Values["profile"].(map[string]interface{})
+	userProfile, ok := session.Values["profile"].(map[string]interface{})
+	if !ok {
+		//not signed in
+		return
+	} 
 	usersCollection := db.Db.Collection("users")
 	dbResult := &bson.D{{}}
 	err := usersCollection.FindOne(db.Ctx, bson.M{
