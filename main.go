@@ -9,9 +9,9 @@ import (
 
 	"./authzero"
 	"./db"
+	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"go.mongodb.org/mongo-driver/bson"
-	"./api/tag"
 )
 
 func main() {
@@ -35,7 +35,7 @@ func main() {
 }
 
 func authZeroTestHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := authzero.Store.Get(r, "auth-session")
+	session, err := authzero.GetAuthSession(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -49,15 +49,15 @@ func authZeroTestHandler(w http.ResponseWriter, r *http.Request) {
 	//fmt.Fprintln(w, session.Values["profile"].(map[string]interface{})["nickname"])
 }
 
+// CheckUserInDB checks if the logged in user from the session is in db, else he is added.
 func CheckUserInDB(session *sessions.Session, r *http.Request) {
 	userProfile, ok := session.Values["profile"].(map[string]interface{})
 	if !ok {
 		//not signed in
 		return
-	} 
-	usersCollection := db.Db.Collection("users")
+	}
 	dbResult := &bson.D{{}}
-	err := usersCollection.FindOne(db.Ctx, bson.M{
+	err := db.UsersCollection.FindOne(db.Ctx, bson.M{
 		"email": userProfile["email"]}).Decode(dbResult)
 	if err != nil {
 		//fmt.Println(err)
@@ -72,7 +72,7 @@ func CheckUserInDB(session *sessions.Session, r *http.Request) {
 			{"createdEvents", bson.A{}},
 			{"queuedPush", bson.A{}},
 		}
-		insertResult, err := usersCollection.InsertOne(db.Ctx, newUserDoc)
+		insertResult, err := db.UsersCollection.InsertOne(db.Ctx, newUserDoc)
 		if err != nil {
 			fmt.Println(err.Error())
 		}

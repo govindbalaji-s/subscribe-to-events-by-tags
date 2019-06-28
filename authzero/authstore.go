@@ -4,9 +4,11 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/sessions"
 	"io/ioutil"
+	"net/http"
 	"os"
+
+	"github.com/gorilla/sessions"
 )
 
 var (
@@ -32,4 +34,8 @@ func Init() error {
 	Store = sessions.NewFilesystemStore("", []byte(auth0config["sessionKey"].(string)))
 	gob.Register(map[string]interface{}{})
 	return nil
+}
+
+func GetAuthSession(r *http.Request) (*sessions.Session, error) {
+	return Store.Get(r, "auth-session")
 }

@@ -11,12 +11,22 @@ import (
 var (
 	Client *mongo.Client
 	Db     *mongo.Database
-    Ctx     context.Context
+	Ctx    context.Context
+
+	UsersCollection,
+	TagsCollection,
+	EventsCollection *mongo.Collection
 )
 
 const (
-	uri    = "mongodb://127.0.0.1:27017"
-	dbName = "set"
+	uri            = "mongodb://127.0.0.1:27017"
+	dbName         = "set"
+	emailField     = "email"
+	eventIDField   = "_id"
+	tagNameField   = "name"
+	tagsField      = "tags"
+	eventsField    = "events"
+	followersField = "followers"
 )
 
 func Init() context.CancelFunc {
@@ -33,5 +43,8 @@ func Init() context.CancelFunc {
 		return nil
 	}
 	Db = Client.Database(dbName)
+	UsersCollection = Db.Collection("users")
+	TagsCollection = Db.Collection("tags")
+	EventsCollection = Db.Collection("events")
 	return cancel
 }
