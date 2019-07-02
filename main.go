@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 
+	"./api"
 	"./authzero"
 	"./db"
 	"github.com/gorilla/mux"
@@ -30,6 +31,16 @@ func main() {
 	rout.HandleFunc("/logout", authzero.LogoutHandler)
 	rout.HandleFunc("/dashboard", authZeroTestHandler)
 
+	tagPostRout := rout.PathPrefix("/api/tag").Methods("POST").Subrouter()
+	tagPostRout.HandleFunc("/create/{tagName}", api.CreateTag)
+	tagPostRout.HandleFunc("/follow/{tagName}", api.FollowTag)
+	tagPostRout.HandleFunc("/unfollow/{tagName}", api.UnfollowTag)
+	tagPostRout.HandleFunc("/tag/{tagName}/{eventID}", api.TagEvent)
+	tagPostRout.HandleFunc("/untag/{tagName}/{eventID}", api.UntagEvent)
+
+	tagGetRout := rout.PathPrefix("/api/tag").Methods("GET").Subrouter()
+	tagGetRout.HandleFunc("/get/{tagName}", api.GetTag)
+	tagGetRout.HandleFunc("/search/{query}", api.SearchTags)
 	//fmt.Println("going to start")
 	log.Fatal(http.ListenAndServe(":8080", rout))
 }

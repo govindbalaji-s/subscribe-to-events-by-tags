@@ -12,22 +12,27 @@ import (
 // Return values:
 // 0 - tag succesfully created
 // 1 - name is not valid
-// 2 - database error
+// 2 - tag already exists
+// 3 - database error
 func CreateTag(name string) int {
 	//validate name: a-z and '-' only, start&end with a-z.... ^[a-z]([a-z-]*[a-z])?$
+	errorPrefix := "set: db/tag.go: CreateTag:"
 	valid, _ := regexp.MatchString("^[a-z]([a-z-]*[a-z])?$", name)
 	if !valid {
 		return 1
 	}
+	if _, ok := ReadTag(name, errorPrefix); ok {
+		return 2
+	}
 	insertResult, err := TagsCollection.InsertOne(Ctx, bson.D{
-		{tagNameField, name},
-		{followersField, bson.A{}},
-		{eventsField, bson.A{}},
+		{TagNameField, name},
+		{FollowersField, bson.A{}},
+		{EventsField, bson.A{}},
 	})
 	if err != nil {
-		fmt.Println("set: tag.go: CreateTag(: name=", name, err)
+		fmt.Println(errorPrefix, " name=", name, err)
 		fmt.Println(insertResult)
-		return 2
+		return 3
 	}
 	fmt.Println(insertResult)
 	return 0
@@ -49,22 +54,22 @@ func TagEvent(email string, tagName string, eventID primitive.ObjectID, toTag bo
 		errorPrefix = "set: tag.go: TagEvent(untag):"
 		updateOp = "$pull"
 	}
-	if _, ok := readTag(tagName, errorPrefix); !ok {
+	if _, ok := ReadTag(tagName, errorPrefix); !ok {
 		return 1
 	}
 
-	event, ok := readEvent(eventID, errorPrefix)
+	event, ok := ReadEvent(eventID, errorPrefix)
 	if !ok {
 		return 2
 	}
 
-	if email != event[eventCreatorField].(string) {
+	if email != event[EventCreatorField].(string) {
 		return 3
 	}
 
-	updateResult, err := TagsCollection.UpdateOne(Ctx, bson.M{tagNameField: tagName}, bson.D{
+	updateResult, err := TagsCollection.UpdateOne(Ctx, bson.M{TagNameField: tagName}, bson.D{
 		{updateOp, bson.D{
-			{eventsField, eventID},
+			{EventsField, eventID},
 		}},
 	})
 	fmt.Println(updateResult)
@@ -73,9 +78,9 @@ func TagEvent(email string, tagName string, eventID primitive.ObjectID, toTag bo
 		return 4
 	}
 
-	updateResult, err = EventsCollection.UpdateOne(Ctx, bson.M{eventIDField: eventID}, bson.D{
+	updateResult, err = EventsCollection.UpdateOne(Ctx, bson.M{EventIDField: eventID}, bson.D{
 		{updateOp, bson.D{
-			{tagsField, tagName},
+			{TagsField, tagName},
 		}},
 	})
 	fmt.Println(updateResult)
@@ -101,15 +106,15 @@ func FollowTag(email string, tagName string, toFollow bool) int {
 		errorPrefix = "set: tag.go: FollowTag(unfollow):"
 		updateOp = "$pull"
 	}
-	if _, ok := readUser(email, errorPrefix); !ok {
+	if _, ok := ReadUser(email, errorPrefix); !ok {
 		return 1
 	}
-	if _, ok := readTag(tagName, errorPrefix); !ok {
+	if _, ok := ReadTag(tagName, errorPrefix); !ok {
 		return 2
 	}
-	updateResult, err := UsersCollection.UpdateOne(Ctx, bson.M{emailField: email}, bson.D{
+	updateResult, err := UsersCollection.UpdateOne(Ctx, bson.M{EmailField: email}, bson.D{
 		{updateOp, bson.D{
-			{tagsField, tagName},
+			{TagsField, tagName},
 		}},
 	})
 	fmt.Println(updateResult)
@@ -117,9 +122,9 @@ func FollowTag(email string, tagName string, toFollow bool) int {
 		fmt.Println(errorPrefix+" on updating userCln", err)
 		return 3
 	}
-	updateResult, err = TagsCollection.UpdateOne(Ctx, bson.M{tagNameField: tagName}, bson.D{
+	updateResult, err = TagsCollection.UpdateOne(Ctx, bson.M{TagNameField: tagName}, bson.D{
 		{updateOp, bson.D{
-			{followersField, email},
+			{FollowersField, email},
 		}},
 	})
 	fmt.Println(updateResult)
@@ -128,4 +133,28 @@ func FollowTag(email string, tagName string, toFollow bool) int {
 		return 4
 	}
 	return 0
+}
+
+func SearchTags(query string) ([]bson.M, bool) {
+	var tags []bson.M
+	cur, err := TagsCollection.Find(Ctx, bson.D{
+		{TagNameField, bson.D{
+			{"$regex", query},
+			{"$options", "i"},
+		}},
+	})
+	if err != nil {
+		fmt.Println(err)
+		return nil, false
+	}
+	defer cur.Close(Ctx)
+	for cur.Next(Ctx) {
+		tag := bson.M{}
+		if err = cur.Decode(&tag); err != nil {
+			fmt.Println(err)
+			return nil, false
+		}
+		tags = append(tags, tag)
+	}
+	return tags, true
 }

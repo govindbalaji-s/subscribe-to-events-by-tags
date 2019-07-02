@@ -3,8 +3,9 @@ package authzero
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"golang.org/x/oauth2"
 	"net/http"
+
+	"golang.org/x/oauth2"
 )
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {

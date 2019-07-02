@@ -17,17 +17,17 @@ import (
 // 4 = problem in updating tags
 func CreateEvent(eventName string, eventVenue string, eventTime time.Time, eventDuration time.Duration, eventTags []string, eventCreatorEmail string) int {
 	errorPrefix := "set: event.go: CreateEvent:"
-	if _, ok := readUser(eventCreatorEmail, errorPrefix); !ok {
+	if _, ok := ReadUser(eventCreatorEmail, errorPrefix); !ok {
 		return 1
 	}
 	insertResult, err := EventsCollection.InsertOne(Ctx, bson.D{
-		{eventNameField, eventName},
-		{eventVenueField, eventVenue},
-		{eventTimeField, eventTime},
-		{eventDurationField, eventDuration},
+		{EventNameField, eventName},
+		{EventVenueField, eventVenue},
+		{EventTimeField, eventTime},
+		{EventDurationField, eventDuration},
 		/*{eventTagsField, eventTags},*/ // redundant since TagEvent also adds
-		{eventSubscribersField, bson.A{eventCreatorEmail}},
-		{eventCreatorField, eventCreatorEmail},
+		{EventSubscribersField, bson.A{eventCreatorEmail}},
+		{EventCreatorField, eventCreatorEmail},
 	})
 	eventID := insertResult.InsertedID.(primitive.ObjectID)
 	fmt.Println(insertResult)
@@ -35,9 +35,9 @@ func CreateEvent(eventName string, eventVenue string, eventTime time.Time, event
 		fmt.Println(errorPrefix, "upon insertion", err)
 		return 2
 	}
-	updateResult, err := UsersCollection.UpdateOne(Ctx, bson.M{emailField: eventCreatorEmail}, bson.D{
+	updateResult, err := UsersCollection.UpdateOne(Ctx, bson.M{EmailField: eventCreatorEmail}, bson.D{
 		{"$addToSet", bson.D{
-			{userCreatedEventsField, eventID},
+			{UserCreatedEventsField, eventID},
 		}},
 	})
 	fmt.Println(updateResult)
@@ -62,10 +62,10 @@ func CreateEvent(eventName string, eventVenue string, eventTime time.Time, event
 // 2 = db update failed
 func EditEventDetails(eventID primitive.ObjectID, eventDetailsMap bson.M) int {
 	errorPrefix := "set: event.go: EditEventDetails:"
-	if _, ok := readEvent(eventID, errorPrefix); !ok {
+	if _, ok := ReadEvent(eventID, errorPrefix); !ok {
 		return 1
 	}
-	updateResult, err := EventsCollection.UpdateOne(Ctx, bson.M{eventIDField: eventID}, eventDetailsMap)
+	updateResult, err := EventsCollection.UpdateOne(Ctx, bson.M{EventIDField: eventID}, eventDetailsMap)
 	fmt.Println(updateResult)
 	if err != nil {
 		fmt.Println(errorPrefix, "upon update")
@@ -83,20 +83,20 @@ func EditEventDetails(eventID primitive.ObjectID, eventDetailsMap bson.M) int {
 // 4 = error in clearing up the tags
 func DeleteEvent(eventID primitive.ObjectID) int {
 	errorPrefix := "set: event.go: DeleteEvent:"
-	event, ok := readEvent(eventID, errorPrefix)
+	event, ok := ReadEvent(eventID, errorPrefix)
 	if !ok {
 		return 1
 	}
-	subscribers := event[eventSubscribersField].([]string)
+	subscribers := event[EventSubscribersField].([]string)
 	for _, userEmail := range subscribers {
 		if SubscribeToEvent(eventID, userEmail, false) != 0 {
 			return 2
 		}
 	}
-	creatorEmail := event[eventCreatorField].(string)
-	updateResult, err := UsersCollection.UpdateOne(Ctx, bson.M{emailField: creatorEmail}, bson.D{
+	creatorEmail := event[EventCreatorField].(string)
+	updateResult, err := UsersCollection.UpdateOne(Ctx, bson.M{EmailField: creatorEmail}, bson.D{
 		{"$pull", bson.D{
-			{userCreatedEventsField, eventID},
+			{UserCreatedEventsField, eventID},
 		}},
 	})
 	fmt.Println(updateResult)
@@ -104,7 +104,7 @@ func DeleteEvent(eventID primitive.ObjectID) int {
 		fmt.Println(errorPrefix, "upon updating createdEvents")
 		return 3
 	}
-	tags := event[eventTagsField].([]string)
+	tags := event[EventTagsField].([]string)
 	for _, tagName := range tags {
 		if TagEvent(creatorEmail, tagName, eventID, false) != 0 {
 			return 4
@@ -128,15 +128,15 @@ func SubscribeToEvent(eventID primitive.ObjectID, userEmail string, toSubscribe 
 		errorPrefix = "set: event.go: SubscribeToEvent(unsub):"
 		updateOp = "$pull"
 	}
-	if _, ok := readEvent(eventID, errorPrefix); !ok {
+	if _, ok := ReadEvent(eventID, errorPrefix); !ok {
 		return 1
 	}
-	if _, ok := readUser(userEmail, errorPrefix); !ok {
+	if _, ok := ReadUser(userEmail, errorPrefix); !ok {
 		return 2
 	}
-	updateResult, err := EventsCollection.UpdateOne(Ctx, bson.M{eventIDField: eventID}, bson.D{
+	updateResult, err := EventsCollection.UpdateOne(Ctx, bson.M{EventIDField: eventID}, bson.D{
 		{updateOp, bson.D{
-			{eventSubscribersField, userEmail},
+			{EventSubscribersField, userEmail},
 		}},
 	})
 	fmt.Println(updateResult)
@@ -144,9 +144,9 @@ func SubscribeToEvent(eventID primitive.ObjectID, userEmail string, toSubscribe 
 		fmt.Println(errorPrefix, "upon updating EventsColln")
 		return 3
 	}
-	updateResult, err = UsersCollection.UpdateOne(Ctx, bson.M{emailField: userEmail}, bson.D{
+	updateResult, err = UsersCollection.UpdateOne(Ctx, bson.M{EmailField: userEmail}, bson.D{
 		{updateOp, bson.D{
-			{userSubscribedEventsField, eventID},
+			{UserSubscribedEventsField, eventID},
 		}},
 	})
 	fmt.Println(updateResult)

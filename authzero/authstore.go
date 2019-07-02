@@ -27,6 +27,7 @@ func Init() error {
 	authConfigFile, err := os.Open(authConfigFilePath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
+		return err
 	}
 	rawFileContents, _ := ioutil.ReadAll(authConfigFile)
 	json.Unmarshal([]byte(rawFileContents), &auth0config)
@@ -36,6 +37,29 @@ func Init() error {
 	return nil
 }
 
-func GetAuthSession(r *http.Request) (*sessions.Session, error) {
-	return Store.Get(r, "auth-session")
+func GetAuthSession(r *http.Request) (session *sessions.Session, err error) {
+	session, err = Store.Get(r, "auth-session")
+	if err != nil {
+		fmt.Println("Errrrrrrrrrrrrrrrrrrrrrrrrr", err)
+	}
+	return
+}
+
+func GetUserEmailFromSession(r *http.Request) (string, error) {
+	session, err := GetAuthSession(r)
+	if err != nil {
+		return "", err
+	}
+
+	userProfile, ok := session.Values["profile"].(map[string]interface{})
+	if !ok {
+		return "", NotSignedInError{}
+	}
+	return userProfile["email"].(string), nil
+}
+
+type NotSignedInError struct{}
+
+func (err NotSignedInError) Error() string {
+	return "No user signed in."
 }
