@@ -3,8 +3,6 @@ package db
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -40,6 +38,8 @@ const (
 	EventCreatorField         = "creator"
 	UserCreatedEventsField    = "createdEvents"
 	UserSubscribedEventsField = "subscribedEvents"
+
+	TimeFormat = "02-01-2006 15:04 (IST)"
 )
 
 func Init() context.CancelFunc {
@@ -101,16 +101,10 @@ func ReadUser(email string, errorPrefix string) (user bson.M, ok bool) {
 // CreateTag creates a tag in the database with given name
 // Return values:
 // 0 - tag succesfully created
-// 1 - name is not valid
 // 2 - tag already exists
 // 3 - database error
 func CreateTag(name string) int {
-	//validate name: a-z and '-' only, start&end with a-z.... ^[a-z]([a-z-]*[a-z])?$
 	errorPrefix := "set: db/tag.go: CreateTag:"
-	valid, _ := regexp.MatchString("^[a-z]([a-z-]*[a-z])?$", name)
-	if !valid {
-		return 1
-	}
 	if _, ok := ReadTag(name, errorPrefix); ok {
 		return 2
 	}
@@ -250,16 +244,17 @@ func SearchTags(query string) ([]bson.M, bool) {
 }
 
 // CreateEvent creates an event in the db with the passed parameters.
-// Return values :
+// eventTime in TimeFormat
+// Return values : code, eventID
 // 0 = success
 // 1 = creator DNE in usersColln
 // 2 = db insert failed
 // 3 = db update failed for user's created
 // 4 = problem in updating tags
-func CreateEvent(eventName string, eventVenue string, eventTime time.Time, eventDuration time.Duration, eventTags []string, eventCreatorEmail string) int {
+func CreateEvent(eventName string, eventVenue string, eventTime int64, eventDuration int64, eventTags []string, eventCreatorEmail string) (int, primitive.ObjectID) {
 	errorPrefix := "set: event.go: CreateEvent:"
 	if _, ok := ReadUser(eventCreatorEmail, errorPrefix); !ok {
-		return 1
+		return 1, primitive.NilObjectID
 	}
 	insertResult, err := EventsCollection.InsertOne(Ctx, bson.D{
 		{EventNameField, eventName},
@@ -274,7 +269,7 @@ func CreateEvent(eventName string, eventVenue string, eventTime time.Time, event
 	fmt.Println(insertResult)
 	if err != nil {
 		fmt.Println(errorPrefix, "upon insertion", err)
-		return 2
+		return 2, primitive.NilObjectID
 	}
 	updateResult, err := UsersCollection.UpdateOne(Ctx, bson.M{EmailField: eventCreatorEmail}, bson.D{
 		{"$addToSet", bson.D{
@@ -284,15 +279,15 @@ func CreateEvent(eventName string, eventVenue string, eventTime time.Time, event
 	fmt.Println(updateResult)
 	if err != nil {
 		fmt.Println(errorPrefix, "upon updating UsersColln")
-		return 3
+		return 3, primitive.NilObjectID
 	}
 	//to deal with tags
 	for _, tagName := range eventTags {
 		if TagEvent(eventCreatorEmail, tagName, eventID, true) != 0 {
-			return 4
+			return 4, primitive.NilObjectID
 		}
 	}
-	return 0
+	return 0, eventID
 }
 
 // EditEventDetails edits the event with given eventid and sets the fields present in the eventDetailsMap
@@ -300,17 +295,24 @@ func CreateEvent(eventName string, eventVenue string, eventTime time.Time, event
 // Return values :
 // 0 = success
 // 1 = event dne
-// 2 = db update failed
-func EditEventDetails(eventID primitive.ObjectID, eventDetailsMap bson.M) int {
+// 2 = creator is not the user
+// 3 = db update failed
+func EditEventDetails(eventID primitive.ObjectID, eventDetailsMap bson.M, userEmail string) int {
 	errorPrefix := "set: event.go: EditEventDetails:"
-	if _, ok := ReadEvent(eventID, errorPrefix); !ok {
+	event, ok := ReadEvent(eventID, errorPrefix)
+	if !ok {
 		return 1
 	}
-	updateResult, err := EventsCollection.UpdateOne(Ctx, bson.M{EventIDField: eventID}, eventDetailsMap)
+	if event[EventCreatorField].(string) != userEmail {
+		return 2
+	}
+	updateResult, err := EventsCollection.UpdateOne(Ctx, bson.M{EventIDField: eventID}, bson.D{
+		{"$set", eventDetailsMap},
+	})
 	fmt.Println(updateResult)
 	if err != nil {
 		fmt.Println(errorPrefix, "upon update")
-		return 2
+		return 3
 	}
 	return 0
 }
@@ -319,19 +321,25 @@ func EditEventDetails(eventID primitive.ObjectID, eventDetailsMap bson.M) int {
 // Returns:
 // 0 = success
 // 1 = event dne
-// 2 = error in clearing up subs
-// 3 = error in clearing up the creator
-// 4 = error in clearing up the tags
-func DeleteEvent(eventID primitive.ObjectID) int {
+// 2 = creator not signed in
+// 3 = error in clearing up subs
+// 4 = error in clearing up the creator
+// 5 = error in clearing up the tags
+// 6 = error in deleting event
+func DeleteEvent(eventID primitive.ObjectID, userEmail string) int {
 	errorPrefix := "set: event.go: DeleteEvent:"
 	event, ok := ReadEvent(eventID, errorPrefix)
 	if !ok {
 		return 1
 	}
-	subscribers := event[EventSubscribersField].([]string)
+	if event[EventCreatorField].(string) != userEmail {
+		return 2
+	}
+	fmt.Println(event)
+	subscribers := event[EventSubscribersField].(primitive.A)
 	for _, userEmail := range subscribers {
-		if SubscribeToEvent(eventID, userEmail, false) != 0 {
-			return 2
+		if SubscribeToEvent(eventID, userEmail.(string), false) != 0 {
+			return 3
 		}
 	}
 	creatorEmail := event[EventCreatorField].(string)
@@ -343,13 +351,18 @@ func DeleteEvent(eventID primitive.ObjectID) int {
 	fmt.Println(updateResult)
 	if err != nil {
 		fmt.Println(errorPrefix, "upon updating createdEvents")
-		return 3
+		return 4
 	}
-	tags := event[EventTagsField].([]string)
+	tags := event[EventTagsField].(primitive.A)
 	for _, tagName := range tags {
-		if TagEvent(creatorEmail, tagName, eventID, false) != 0 {
-			return 4
+		if TagEvent(creatorEmail, tagName.(string), eventID, false) != 0 {
+			return 5
 		}
+	}
+	_, err = EventsCollection.DeleteOne(Ctx, bson.M{EventIDField: eventID})
+	if err != nil {
+		fmt.Println(errorPrefix, "upon deleting event")
+		return 6
 	}
 	return 0
 }
@@ -396,4 +409,28 @@ func SubscribeToEvent(eventID primitive.ObjectID, userEmail string, toSubscribe 
 		return 4
 	}
 	return 0
+}
+
+func SearchEventsByName(query string) ([]bson.M, bool) {
+	var events []bson.M
+	cur, err := EventsCollection.Find(Ctx, bson.D{
+		{EventNameField, bson.D{
+			{"$regex", query},
+			{"$options", "i"},
+		}},
+	})
+	if err != nil {
+		fmt.Println(err)
+		return nil, false
+	}
+	defer cur.Close(Ctx)
+	for cur.Next(Ctx) {
+		event := bson.M{}
+		if err = cur.Decode(&event); err != nil {
+			fmt.Println(err)
+			return nil, false
+		}
+		events = append(events, event)
+	}
+	return events, true
 }

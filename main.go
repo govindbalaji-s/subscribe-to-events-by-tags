@@ -41,6 +41,17 @@ func main() {
 	tagGetRout := rout.PathPrefix("/api/tag").Methods("GET").Subrouter()
 	tagGetRout.HandleFunc("/get/{tagName}", api.GetTag)
 	tagGetRout.HandleFunc("/search/{query}", api.SearchTags)
+
+	eventPostRout := rout.PathPrefix("/api/event").Methods("POST").Subrouter()
+	eventPostRout.HandleFunc("/create", api.CreateEvent)
+	eventPostRout.HandleFunc("/edit", api.EditEvent)
+	eventPostRout.HandleFunc("/delete/{eventID}", api.DeleteEvent)
+	eventPostRout.HandleFunc("/subscribe/{eventID}", api.SubscribeToEvent)
+	eventPostRout.HandleFunc("/unsubscribe/{eventID}", api.UnsubscribeToEvent)
+
+	eventGetRout := rout.PathPrefix("/api/event").Methods("GET").Subrouter()
+	eventGetRout.HandleFunc("/get/{eventID}", api.GetEvent)
+	eventGetRout.HandleFunc("/search/name/{query}", api.SearchEventsByName)
 	//fmt.Println("going to start")
 	log.Fatal(http.ListenAndServe(":8080", rout))
 }
