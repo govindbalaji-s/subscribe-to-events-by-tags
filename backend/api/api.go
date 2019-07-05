@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"set/authzero"
-	"set/db"
-	"set/util"
+	"set/backend/authzero"
+	"set/backend/db"
+	"set/backend/util"
 	"strconv"
 
 	"go.mongodb.org/mongo-driver/bson"
