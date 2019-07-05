@@ -28,6 +28,36 @@ func init() {
 	defer cancelDbCtx()
 }
 
+func GetUser(w http.ResponseWriter, r *http.Request) {
+	userEmail, err := authzero.GetUserEmailFromSession(r)
+	if err != nil {
+		writeFailed(w, "no user signed in", http.StatusBadRequest)
+		return
+	}
+	user, ok := db.ReadUser(userEmail, "set: api.go: GetUser")
+	if !ok {
+		writeFailed(w, "user dne", http.StatusBadRequest)
+	}
+
+	var archivedEvents, subscribedEvents, createdEvents []string
+	for _, event := range user["archivedEvents"].(primitive.A) {
+		archivedEvents = append(archivedEvents, event.(primitive.ObjectID).Hex())
+	}
+	for _, event := range user[db.UserSubscribedEventsField].(primitive.A) {
+		subscribedEvents = append(subscribedEvents, event.(primitive.ObjectID).Hex())
+	}
+	for _, event := range user[db.UserCreatedEventsField].(primitive.A) {
+		createdEvents = append(createdEvents, event.(primitive.ObjectID).Hex())
+	}
+	writeSuccess(w, map[string]interface{}{
+		"email":            user[db.EmailField].(string),
+		"tags":             user[db.TagsField].(primitive.A),
+		"archivedEvents":   archivedEvents,
+		"subscribedEvents": subscribedEvents,
+		"createdEvents":    createdEvents,
+	})
+}
+
 func CreateTag(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	_, err := authzero.GetUserEmailFromSession(r)

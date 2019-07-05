@@ -29,7 +29,9 @@ func main() {
 	rout.HandleFunc("/authcallback", authzero.CallbackHandler)
 	rout.HandleFunc("/login", authzero.LoginHandler)
 	rout.HandleFunc("/logout", authzero.LogoutHandler)
-	rout.HandleFunc("/dashboard", authZeroTestHandler)
+
+	rout.HandleFunc("/user/get", api.GetUser).Methods("GET")
+	rout.HandleFunc("/testdashboard", authZeroTestHandler)
 
 	tagPostRout := rout.PathPrefix("/api/tag").Methods("POST").Subrouter()
 	tagPostRout.HandleFunc("/create/{tagName}", api.CreateTag)
