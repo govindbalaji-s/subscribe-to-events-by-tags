@@ -19,8 +19,8 @@ var (
 const (
 	authConfigFilePath = "./authzero/auth0config.json"
 	authCallbackURL    = "http://127.0.0.1:8080/authcallback"
-	postAuthPath       = "/dashboard"
-	postLogoutURL      = "http://127.0.0.1:8080/dashboard"
+	postAuthPath       = "/"
+	postLogoutURL      = "http://127.0.0.1:8080/"
 )
 
 func Init() error {

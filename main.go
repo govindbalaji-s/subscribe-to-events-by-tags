@@ -54,7 +54,9 @@ func main() {
 	eventGetRout := rout.PathPrefix("/api/event").Methods("GET").Subrouter()
 	eventGetRout.HandleFunc("/get/{eventID}", api.GetEvent)
 	eventGetRout.HandleFunc("/search/name/{query}", api.SearchEventsByName)
-	//fmt.Println("going to start")
+
+	rout.PathPrefix("/").Handler(http.FileServer(http.Dir("./static/")))
+
 	log.Fatal(http.ListenAndServe(":8080", rout))
 }
 

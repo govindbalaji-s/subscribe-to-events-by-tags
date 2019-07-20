@@ -1,6 +1,6 @@
 # Auth0 config
-backend/authzero/auth0config.json
-backend/main
-backend/tempvendor/*
-backend/tempGopkg.lock
-backend/tempGopkg.toml
+/authzero/auth0config.json
+/main
+/tempvendor/*
+/tempGopkg.lock
+/tempGopkg.toml
