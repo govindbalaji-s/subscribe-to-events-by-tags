@@ -2,67 +2,6 @@
 
 const DASHBOARD = 0;
 
-class FollowingTags extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            fromIndex: 0,
-            toIndex: this.props.perPage
-        };
-    }
-
-    render() {
-        return (
-            <div>
-                <ul>
-                    {this.props.tags.slice(this.state.fromIndex, this.state.toIndex).map( tag => (
-                        <li key={tag}>
-                            <a href="#">{tag}</a>
-                        </li>
-                    ));}
-                </ul>
-                <button onClick={this.previousPage}>Prev</button>
-                <span
-                <button onClick={this.nextPage}>Next</button>
-            </div>
-        );
-    }
-
-    nextPage() {
-        this.setState((state, props) => {
-            return {
-                fromIndex: state.fromIndex+props.perPage,
-                toIndex: min(state.toIndex+props.perPage, props.tags.length)
-            }
-        });
-    }
-
-    previousPage() {
-
-    }
-}
-
-class Dashboard extends React.Component {
-    render() {
-        if(!this.props.user) { //check if no user signed in
-            return <a href="/login">Login</a>;
-        }
-        else {
-            return (
-                <div>
-                    Hello {this.props.user.email}!
-                    <br/>
-                    <a href="/logout" onClick={()=>{Cookies.remove('auth-session');}}>Logout</a>
-                    <FollowingTags
-                        tags={this.props.user.tags}
-                        perPage={5}
-                    />
-                </div>
-                );
-        }
-    }
-}
-
 class App extends React.Component {
     constructor(props) {
         super(props);
@@ -70,8 +9,13 @@ class App extends React.Component {
             screen: DASHBOARD,
             user: null
         }
+        this.updateUser = this.updateUser.bind(this);
+        this.unfollowHandler = this.unfollowHandler.bind(this);
+
         this.updateUser();
     }
+
+    // Calls API to get the user object
     updateUser() {
         $.getJSON('/user/get', data => {
             if(data.result == 'success') {
@@ -82,12 +26,24 @@ class App extends React.Component {
             }
         });
     }
+
+    // Calls API to unfollow a tag
+    unfollowHandler(tagName) {
+        console.log("Trying to unfollow"+tagName);
+        $.post(`/api/tag/unfollow/${tagName}`, data => {
+            if(data.result == 'success') {
+                console.log(`Tag ${tagName} unfollowed.`);
+            }
+            this.updateUser();
+        }, 'json');
+    }
     render() {
         if(this.state.screen == DASHBOARD) {
             return (
                 <Dashboard
                     user = {this.state.user}
                     updateUser = {this.updateUser}
+                    unfollowHandler = {this.unfollowHandler}
                 />
             );
         }

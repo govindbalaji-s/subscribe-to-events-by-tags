@@ -1,0 +1,17 @@
+const   EmailField                = "email",
+        EventIDField              = "_id",
+        TagNameField              = "name",
+        TagsField                 = "tags",
+        EventsField               = "events",
+        FollowersField            = "followers",
+        EventNameField            = "name",
+        EventVenueField           = "venue",
+        EventTimeField            = "time",
+        EventDurationField        = "duration",
+        EventTagsField            = "tags",
+        EventSubscribersField     = "subscribers",
+        EventCreatorField         = "creator",
+        UserCreatedEventsField    = "createdEvents",
+        UserSubscribedEventsField = "subscribedEvents",
+
+        TimeFormat = "02-01-2006 15:04 (IST)";
