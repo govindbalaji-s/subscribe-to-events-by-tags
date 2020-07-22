@@ -70,7 +70,7 @@ func authZeroTestHandler(w http.ResponseWriter, r *http.Request) {
 	//Check if this is new user and if so , add in database
 	CheckUserInDB(session, r)
 
-	temp, _ := template.ParseFiles("testdash.html")
+	temp, _ := template.ParseFiles("static/testdash.html")
 	temp.Execute(w, session.Values["profile"])
 	//fmt.Fprintln(w, session.Values["profile"].(map[string]interface{})["nickname"])
 }

@@ -33,6 +33,7 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if state != session.Values["state"] {
+		fmt.Println(session.Values)
 		http.Error(w, "Invalid state parameter", http.StatusInternalServerError)
 		return
 	}
