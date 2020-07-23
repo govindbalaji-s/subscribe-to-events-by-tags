@@ -3,54 +3,44 @@
 ** Required props:
 **      props.tags -> list of tags
 **      props.unFollowHandler -> function(TagNameField) to call for unfollow event
+**      props.onTagDetails -> move to tag page
 */
-class FollowingTags extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            fromIndex: 0,
-            perPage: 5
-        };
-        this.nextPage = this.nextPage.bind(this);
-        this.previousPage = this.previousPage.bind(this);
-    }
+function FollowingTags(props) {
+    return (
+        <PagedList  header = {<h2>Tags you follow:</h2>}
+                    items = {props.tags}
+                    itemClass = {TagListRow}
+                    keyFn = {tag => tag}
+                    otherProps = {{
+                                    actionLabel: "Unfollow",
+                                    onUnfollow: props.unfollowHandler,
+                                    onTagDetails: props.onTagDetails
+                                }}
+        />
+    )
+}
 
-    render() {
-        return (
-            <div>
-                <h2>Tags you follow:</h2>
-                <Button onClick={this.previousPage}>Prev</Button>
-                <Button onClick={this.nextPage}>Next</Button>
-                <TagList tags = {this.props.tags}
-                         fromIndex = {this.state.fromIndex}
-                         perPage = {this.state.perPage}
-                         actionLabel = "Unfollow"
-                         onClick = {this.props.unfollowHandler}
-                />
-            </div>
-        );
-    }
-
-    nextPage() {
-        this.setState((state, props) => {
-            if(state.fromIndex + state.perPage < props.tags.length) {
-                return {
-                    fromIndex: state.fromIndex+state.perPage
-                };
-            }
-            else{
-                return {}
-            }
-        });
-    }
-
-    previousPage() {
-        this.setState((state, props) => {
-            return {
-                fromIndex: Math.max(state.fromIndex-state.perPage, 0)
-            };
-        });
-    }
+/*
+ ** List of subscribed events
+ ** Required props:
+ **     props.eventIDs
+ **     props.onEventDetails
+ **     props.onEventToggleSubscription
+ */
+function SubscribedEvents(props) {
+    console.log(props.events);
+    return (
+        <PagedList  header = {<h2>Events subscribed:</h2>}
+                    items = {props.events}
+                    itemClass = {EventListRow}
+                    keyFn = {event => event[APIEventIDField]}
+                    otherProps = {{
+                        onDetails: props.onEventDetails, // TODO: move to events page
+                        onAction: props.onEventToggleSubscription,
+                        actionLabel: "Unsubscribe"
+                    }}
+        />
+    )
 }
 
 /*
@@ -58,6 +48,10 @@ class FollowingTags extends React.Component {
 ** Required props:
 **      props.user -> user object
 **      props.unfollowHandler -> function(TagNameField) to call when unfollowing a tag
+**      props.onFetchEvents -> function([EventID]) to call to fetch events
+**      props.onEventDetails -> function(eventid) to call to move to event page
+**      props.onEventSubscribe,
+**      props.onEventUnsubscribe -> function(eventid) to call to toggle subscription to the event
 */
 class Dashboard extends React.Component {
     render() {
@@ -65,14 +59,23 @@ class Dashboard extends React.Component {
             return <LoginButton />;
         }
         else {
+            console.log(this.props.user);
             return (
                 <div>
-                    Hello {this.props.user.email}!
+                    Hello {this.props.user[APIUserEmailField]}!
                     <br/>
                     <LogoutButton />
                     <FollowingTags
-                        tags={this.props.user.tags}
+                        tags={this.props.user[APIUserTagsField]}
                         unfollowHandler = {this.props.unfollowHandler}
+                        onTagDetails = {this.props.onTagDetails}
+                    />
+                    <SubscribedEvents
+                        eventIDs = {this.props.user[APIUserSubscribedEventsField]}
+                        events = {this.props.user.subscribedEventsData}
+                        onFetchEvents = {this.props.onFetchEvents}
+                        onEventDetails = {this.props.onEventDetails}
+                        onEventToggleSubscription = {this.props.onEventUnsubscribe}
                     />
                 </div>
                 );
