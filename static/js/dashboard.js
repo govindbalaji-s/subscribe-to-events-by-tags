@@ -6,16 +6,17 @@
 **      props.onTagDetails -> move to tag page
 */
 function FollowingTags(props) {
+    const commonOtherProps = {
+        actionLabel: "Unfollow",
+        onUnfollow: props.unfollowHandler,
+        onTagDetails: props.onTagDetails
+    };
+    const combinedItems = props.tags.map(tag => ({item:tag, otherProps:commonOtherProps}));
     return (
         <PagedList  header = {<h2>Tags you follow:</h2>}
-                    items = {props.tags}
+                    items = {combinedItems}
                     itemClass = {TagListRow}
-                    keyFn = {tag => tag}
-                    otherProps = {{
-                                    actionLabel: "Unfollow",
-                                    onUnfollow: props.unfollowHandler,
-                                    onTagDetails: props.onTagDetails
-                                }}
+                    keyFn = {tagKeyFn}
         />
     )
 }
@@ -29,16 +30,17 @@ function FollowingTags(props) {
  */
 function SubscribedEvents(props) {
     console.log(props.events);
+    const commonOtherProps = {
+        onDetails: props.onEventDetails, // TODO: move to events page
+        onAction: props.onEventToggleSubscription,
+        actionLabel: "Unsubscribe"
+    };
+    const combinedItems = props.events.map(event => ({item:event, otherProps: commonOtherProps}));
     return (
         <PagedList  header = {<h2>Events subscribed:</h2>}
-                    items = {props.events}
+                    items = {combinedItems}
                     itemClass = {EventListRow}
-                    keyFn = {event => event[APIEventIDField]}
-                    otherProps = {{
-                        onDetails: props.onEventDetails, // TODO: move to events page
-                        onAction: props.onEventToggleSubscription,
-                        actionLabel: "Unsubscribe"
-                    }}
+                    keyFn = {eventKeyFn}
         />
     )
 }
@@ -55,30 +57,22 @@ function SubscribedEvents(props) {
 */
 class Dashboard extends React.Component {
     render() {
-        if(!this.props.user) { //check if no user signed in
-            return <LoginButton />;
-        }
-        else {
-            console.log(this.props.user);
-            return (
-                <div>
-                    Hello {this.props.user[APIUserEmailField]}!
-                    <br/>
-                    <LogoutButton />
-                    <FollowingTags
-                        tags={this.props.user[APIUserTagsField]}
-                        unfollowHandler = {this.props.unfollowHandler}
-                        onTagDetails = {this.props.onTagDetails}
-                    />
-                    <SubscribedEvents
-                        eventIDs = {this.props.user[APIUserSubscribedEventsField]}
-                        events = {this.props.user.subscribedEventsData}
-                        onFetchEvents = {this.props.onFetchEvents}
-                        onEventDetails = {this.props.onEventDetails}
-                        onEventToggleSubscription = {this.props.onEventUnsubscribe}
-                    />
-                </div>
-                );
-        }
+        console.log(this.props.user);
+        return (
+            <React.Fragment>
+                <FollowingTags
+                    tags={this.props.user[APIUserTagsField]}
+                    unfollowHandler = {this.props.unfollowHandler}
+                    onTagDetails = {this.props.onTagDetails}
+                />
+                <SubscribedEvents
+                    eventIDs = {this.props.user[APIUserSubscribedEventsField]}
+                    events = {this.props.user.subscribedEventsData}
+                    onFetchEvents = {this.props.onFetchEvents}
+                    onEventDetails = {this.props.onEventDetails}
+                    onEventToggleSubscription = {this.props.onEventUnsubscribe}
+                />
+            </React.Fragment>
+            );
     }
 }

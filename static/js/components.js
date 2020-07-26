@@ -38,17 +38,16 @@ function PagedListPage(props) {
         perPage = props.perPage,
         items = props.items,
         ItemClass = props.itemClass,
-        keyFn = props.keyFn,
-        otherProps = props.otherProps;
+        keyFn = props.keyFn;
     
     let toIndex = Math.min(fromIndex+perPage, items.length);
     return (
         <div>
             <ul>
                 {items.slice(fromIndex, toIndex).map(item =>
-                    <ItemClass  key = {keyFn(item)}
-                                item = {item}
-                                otherProps = {otherProps} />
+                    <ItemClass  key = {keyFn(item.item)}
+                                item = {item.item}
+                                otherProps = {item.otherProps} />
                     )}
             </ul>
         </div>
@@ -86,7 +85,6 @@ class PagedList extends React.Component {
                                 items = {this.props.items}
                                 itemClass= {this.props.itemClass}
                                 keyFn = {this.props.keyFn}
-                                otherProps = {this.props.otherProps}
                 />
             </div>
         );
