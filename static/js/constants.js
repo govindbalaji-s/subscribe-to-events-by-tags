@@ -1,6 +1,8 @@
 const   APIUserEmailField            = "email",
         APITagNameField              = "name",
         APIUserTagsField             = "tags",
+        APITaggedEventsField         = "taggedEvents",
+
         APIEventsField               = "events",
         APIFollowersField            = "followers",
 

@@ -189,7 +189,7 @@ func tagToSendable(tag bson.M, userEmail string) map[string]interface{} {
 		"tagName":       tagName,
 		"isFollowing":   strconv.FormatBool(util.Contains(followers, userEmail)),
 		"noOfFollowers": strconv.Itoa(len(followers)),
-		"noOfEvents":    strconv.Itoa(len(events)),
+		"taggedEvents":  events,
 	}
 	return data
 }
